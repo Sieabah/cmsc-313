@@ -1,0 +1,171 @@
+     1                                  ;Name: Christopher Sidell
+     2                                  ;Date: 9/21/2014
+     3                                  ;Section: 01
+     4                                  ; Project1
+     5                                  ; This project takes lowercase and makes it uppercase, upper to lower, 
+     6                                  ; 	number of stars, and prints current iteration in symbols
+     7                                  
+     8                                  [SECTION .data]
+     9 00000000 0A0A0A456E74657220-     	PromptMsg: db 10,10,10,"Enter one char: " ;Prompt
+    10 00000009 6F6E6520636861723A-
+    11 00000012 20                 
+    12                                  	PromptLen: equ $-PromptMsg 	;Length of prompt
+    13                                  
+    14 00000013 0A4865726520697320-     	PrintMsg: db 10,"Here is the output: " ;Printed PrintMsg
+    15 0000001C 746865206F75747075-
+    16 00000025 743A20             
+    17                                  	PrintLen: equ $-PrintMsg 	;length of print message
+    18                                  
+    19 00000028 0A0A5468616E6B2079-     	ExitMsg: db 10,10,"Thank you for using this program",10 ; exit message
+    20 00000031 6F7520666F72207573-
+    21 0000003A 696E67207468697320-
+    22 00000043 70726F6772616D0A   
+    23                                  	ExitLen: equ $-ExitMsg 		; exitmessage length
+    24                                  
+    25 0000004B 2A                      	Star: db "*" 				; start
+    26                                  	StarLen: equ $-Star 		; length of star
+    27                                  
+    28                                  [SECTION .bss]
+    29 00000000 <res 00000004>          		Buff resb 4 			; allocate 4 bytes 3 for char, newline, null
+    30                                  								; and safety bit
+    31 00000004 <res 00000004>          		LoTemp resd 1 			; LoopTemporary byte for counting
+    32 00000008 <res 00000001>          		Iteration resb 1 		; Iteration byte for whole program
+    33                                  
+    34                                  [SECTION .text]
+    35                                  
+    36                                  global _start                   ; make start global so ld can find it
+    37                                  
+    38                                  _start:                         ; the program actually starts here
+    39 00000000 90                      		nop
+    40                                  
+    41 00000001 C605[08000000]00        		mov byte [Iteration],0 		; init iteration value to 0
+    42                                  
+    43 00000008 FE05[08000000]          Read:	inc byte [Iteration] 	; increment iterator
+    44                                  
+    45 0000000E B804000000              		mov eax,4				; sys_write call
+    46 00000013 BB01000000              		mov ebx,1 				; file descriptor 1, stdout
+    47 00000018 B9[00000000]            		mov ecx,PromptMsg 		; characters to write 
+    48 0000001D BA13000000              		mov edx,PromptLen		; pass number of chars to write
+    49 00000022 CD80                    		int 80h 				; kernel interrupt
+    50                                  
+    51 00000024 B803000000              		mov eax,3				; sys_read call
+    52 00000029 BB00000000              		mov ebx,0 				; File descriptor 0: stdin
+    53 0000002E B9[00000000]            		mov ecx,Buff 			; Pass offset of the buffer to read to
+    54 00000033 BA03000000              		mov edx, 3 				; sys_read to read one char form stdin
+    55 00000038 CD80                    		int 80H 				; kernel interrupt
+    56                                  
+    57 0000003A 8125[00000000]FF00-     		and dword [Buff],0xff 	; clear out all but first byte
+    58 00000042 0000               
+    59                                  
+    60 00000044 3D00000000              		cmp eax,0 				; find what EAX has from sys_read
+    61 00000049 0F8457010000            		je Exit 				; Jump if equal to 0 (0 means EOF) to Exit
+    62                                  
+    63 0000004F 803D[00000000]30        		cmp byte [Buff],30h 	; Check lower end symbol
+    64 00000056 727E                    		jb Symbol 				; Go to symbol processing
+    65                                  
+    66 00000058 803D[00000000]7A        		cmp byte [Buff],7Ah 	; Check higher end symbols
+    67 0000005F 7775                    		ja Symbol 				; Go to symbol processing
+    68                                  
+    69 00000061 803D[00000000]39        		cmp byte [Buff],39h 	; If within range of numbers
+    70 00000068 7631                    		jbe Number 				; Go to Number processing
+    71                                  
+    72 0000006A 803D[00000000]40        		cmp byte [Buff],40h 	;check in between symbols
+    73 00000071 7663                    		jbe Symbol 				; Go to symbol processing
+    74                                  
+    75 00000073 803D[00000000]5A        		cmp byte [Buff],5Ah 	; check if uppercase
+    76 0000007A 0F869B000000            		jbe Upper 				; Go to uppercase processing
+    77                                  
+    78 00000080 803D[00000000]60        		cmp byte [Buff],60h 	; check in between symbols
+    79 00000087 764D                    		jbe Symbol 				; Go to symbol processing
+    80                                  
+    81 00000089 803D[00000000]7A        		cmp byte [Buff],7Ah 	; check if lowercase
+    82 00000090 0F86BD000000            		jbe Lower 				; Go to lowercase processing
+    83                                  
+    84 00000096 E90B010000              		jmp Exit 				; if all else fails quit
+    85                                  
+    86 0000009B 8B0D[00000000]          Number:	mov ecx,[Buff] 			; copy the character
+    87 000000A1 81E930000000            		sub ecx, 48 			; offset for ascii value
+    88 000000A7 81C10A000000            		add ecx, 10 			; project requires 10 moaaarrr
+    89                                  		start_num_loop: 			; loop label
+    90 000000AD 890D[04000000]          			mov [LoTemp], ecx 		; keep copy of iteration
+    91                                  
+    92 000000B3 B804000000              			mov eax,4				; We're going to print the star
+    93 000000B8 BB01000000              			mov ebx,1 				; file descriptor 1, stdout
+    94 000000BD B9[4B000000]            			mov ecx,Star 			; characters to write 
+    95 000000C2 BA01000000              			mov edx,StarLen			; pass number of chars to write
+    96 000000C7 CD80                    			int 80h 				; kernel interrupt
+    97                                  
+    98 000000C9 8B0D[04000000]          			mov ecx, [LoTemp] 		; put the iteration back in ecx
+    99 000000CF E2DC                    		loop start_num_loop 	; Loop back if ecx != 0
+   100 000000D1 E932FFFFFF              		jmp Read
+   101                                  
+   102 000000D6 B804000000              Symbol: mov eax,4				; We're going to print the prompt
+   103 000000DB BB01000000              		mov ebx,1 				; file descriptor 1, stdout
+   104 000000E0 B9[13000000]            		mov ecx,PrintMsg 		; characters to write 
+   105 000000E5 BA15000000              		mov edx,PrintLen		; pass number of chars to write
+   106 000000EA CD80                    		int 80h 				; kernel interrupt
+   107                                  
+   108 000000EC 8B0D[08000000]          		mov ecx,[Iteration]
+   109                                  		start_sym_loop: 			; loop label
+   110 000000F2 890D[04000000]          			mov [LoTemp], ecx 		; keep copy of iteration
+   111                                  
+   112 000000F8 B804000000              			mov eax,4				; We're going to print the star
+   113 000000FD BB01000000              			mov ebx,1 				; file descriptor 1, stdout
+   114 00000102 B9[00000000]            			mov ecx,Buff 			; characters to write 
+   115 00000107 BA01000000              			mov edx,1				; pass number of chars to write
+   116 0000010C CD80                    			int 80h 				; kernel interrupt
+   117                                  
+   118 0000010E 8B0D[04000000]          			mov ecx, [LoTemp] 		; put the iteration back in ecx
+   119 00000114 E2DC                    		loop start_sym_loop 		; Loop back if ecx != 0
+   120                                  
+   121 00000116 E9EDFEFFFF              		jmp Read 				; Back to read 
+   122                                  
+   123 0000011B B804000000              Upper: 	mov eax,4				; We're going to print the prompt
+   124 00000120 BB01000000              		mov ebx,1 				; file descriptor 1, stdout
+   125 00000125 B9[13000000]            		mov ecx,PrintMsg 		; characters to write 
+   126 0000012A BA15000000              		mov edx,PrintLen		; pass number of chars to write
+   127 0000012F CD80                    		int 80h 				; kernel interrupt
+   128                                  
+   129 00000131 8005[00000000]20        		add byte [Buff],20h 	; subtract 20h from lowercase to give uppercase
+   130                                  
+   131 00000138 B804000000              		mov eax,4				; sys_write call
+   132 0000013D BB01000000              		mov ebx,1 				; file descriptor 1, stdout
+   133 00000142 B9[00000000]            		mov ecx,Buff 			; characters to write 
+   134 00000147 BA01000000              		mov edx,1 				; pass number of chars to write
+   135 0000014C CD80                    		int 80h 				; call sys_write
+   136                                  
+   137 0000014E E9B5FEFFFF              		jmp Read 				; go back to get another character
+   138                                  
+   139 00000153 B804000000              Lower: 	mov eax,4				; We're going to print the prompt
+   140 00000158 BB01000000              		mov ebx,1 				; file descriptor 1, stdout
+   141 0000015D B9[13000000]            		mov ecx,PrintMsg 		; characters to write 
+   142 00000162 BA15000000              		mov edx,PrintLen		; pass number of chars to write
+   143 00000167 CD80                    		int 80h 				; kernel interrupt
+   144                                  
+   145 00000169 802D[00000000]20        		sub byte [Buff],20h 	; subtract 20h from lowercase to give uppercase
+   146                                  
+   147 00000170 B804000000              		mov eax,4				; write the character
+   148 00000175 BB01000000              		mov ebx,1 				; file descriptor 1, stdout
+   149 0000017A B9[00000000]            		mov ecx,Buff 			; characters to write 
+   150 0000017F BA01000000              		mov edx,1 				; pass number of chars to write
+   151 00000184 CD80                    		int 80h 				; call sys_write
+   152                                  
+   153 00000186 E97DFEFFFF              		jmp Read 				; go back to get another character
+   154                                  
+   155 0000018B B804000000              Write: 	mov eax,4				; write the character
+   156 00000190 BB01000000              		mov ebx,1 				; file descriptor 1, stdout
+   157 00000195 B9[00000000]            		mov ecx,Buff 			; characters to write 
+   158 0000019A BA01000000              		mov edx,1 				; pass number of chars to write
+   159 0000019F CD80                    		int 80h 				; call sys_write
+   160                                  
+   161 000001A1 E962FEFFFF              		jmp Read 				; go back to get another character
+   162                                  
+   163 000001A6 B804000000              Exit:	mov eax,4				; sys_write call
+   164 000001AB BB01000000              		mov ebx,1 				; file descriptor 1, stdout
+   165 000001B0 B9[28000000]            		mov ecx,ExitMsg 		; characters to write 
+   166 000001B5 BA23000000              		mov edx,ExitLen			; pass number of chars to write
+   167 000001BA CD80                    		int 80h 				; kernel interrupt
+   168                                  
+   169 000001BC B801000000              		mov eax, 1              ; sys_exit syscall
+   170 000001C1 BB00000000                      mov ebx, 0              ; no error
+   171 000001C6 CD80                            int 80H                 ; kernel interrupt
