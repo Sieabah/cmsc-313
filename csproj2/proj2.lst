@@ -1,0 +1,167 @@
+     1                                  ;Name: Christopher Sidell
+     2                                  ;Date: 9/21/2014
+     3                                  ;Section: 01
+     4                                  ; Project2
+     5                                  ; This project takes a string, removes symbols and prints characters in 
+     6                                  ; 	alphabetical order
+     7                                  
+     8                                  [SECTION .data]
+     9 00000000 0A0A456E7465722074-     	PromptMsg: db 10,10,"Enter the input: " ; Prompt
+    10 00000009 686520696E7075743A-
+    11 00000012 20                 
+    12                                  	PromptLen: equ $-PromptMsg 	;Length of prompt
+    13                                  
+    14 00000013 536F7274696E672073-     	SortMsg: db "Sorting string: " ;Printed SortMsg
+    15 0000001C 7472696E673A20     
+    16                                  	SortLen: equ $-SortMsg 		;length of printed message
+    17                                  
+    18 00000023 0A                      	NewLineMsg: db 10 			; new line
+    19                                  	NewLineLen: equ $-NewLineMsg; new line length
+    20                                  
+    21                                  [SECTION .bss]
+    22                                  	BUFFLEN equ 500 			; length of buffer
+    23 00000000 <res 000001F4>          	Buff resb BUFFLEN 			; allocate 500 bytes for input
+    24                                  
+    25 000001F4 <res 000001F4>          	TestBuff resb BUFFLEN 		; string manipulation buffer
+    26                                  
+    27 000003E8 <res 00000001>          	Iteration resb 1 			; Iteration byte for whole program
+    28                                  
+    29                                  [SECTION .text]
+    30                                  
+    31                                  global _start                   ; make start global so ld can find it
+    32                                  
+    33                                  _start:                         ; the program actually starts here
+    34 00000000 90                      		nop
+    35                                  
+    36 00000001 C605[E8030000]00        		mov byte [Iteration],0 	; zero out iteration
+    37                                  
+    38                                  ; Read in the string
+    39 00000008 FE05[E8030000]          Read:	inc byte [Iteration] 	; increment iterator
+    40                                  	
+    41 0000000E 803D[E8030000]03        		cmp byte [Iteration],3 	; compare if we're done our program
+    42 00000015 0F8716010000            		ja Exit 				; quit the program
+    43                                  
+    44 0000001B B804000000              		mov eax,4				; sys_write call
+    45 00000020 BB01000000              		mov ebx,1 				; file descriptor 1, stdout
+    46 00000025 B9[00000000]            		mov ecx,PromptMsg 		; characters to write 
+    47 0000002A BA13000000              		mov edx,PromptLen		; pass number of chars to write
+    48 0000002F CD80                    		int 80h 				; kernel interrupt
+    49                                  
+    50 00000031 BE[00000000]            		mov esi, Buff 			; We need to clear buff for new input
+    51 00000036 31C0                    		xor eax,eax				; clear EAX
+    52                                  		.clearBuff:				; loop
+    53 00000038 C60600                  			mov byte[esi],0h 		; clear byte 
+    54 0000003B 40                      			inc eax 				; increase counter
+    55 0000003C 46                      			inc esi 				; increase memory pointer
+    56 0000003D 3DF4010000              			cmp eax, BUFFLEN 		; check if we reached the end
+    57 00000042 7CF4                    			jl .clearBuff 		; if more exist, go back
+    58                                  
+    59 00000044 B803000000              		mov eax,3				; sys_read call
+    60 00000049 BB00000000              		mov ebx,0 				; File descriptor 0: stdin
+    61 0000004E B9[00000000]            		mov ecx,Buff 			; Pass offset of the buffer to read to
+    62 00000053 BAF4010000              		mov edx,BUFFLEN			; sys_read to read 500 chars
+    63 00000058 CD80                    		int 80H 				; kernel interrupt
+    64                                  
+    65 0000005A 89C6                    		mov esi, eax 			; copy sys_read return value
+    66 0000005C 3D00000000              		cmp eax,0 				; if nothing entered
+    67 00000061 0F84CA000000            		je Exit 				; quit
+    68                                  
+    69 00000067 BE[F4010000]            		mov esi, TestBuff 		; We also need to clear the testing buffer
+    70 0000006C 31C0                    		xor eax,eax 			; clear EAX
+    71                                  		.clearTest:				; start loop
+    72 0000006E C60600                  			mov byte[esi],0h 		; clear byte out
+    73 00000071 40                      			inc eax 				; increase counter
+    74 00000072 46                      			inc esi 				; increase counter
+    75 00000073 3DF4010000              			cmp eax, BUFFLEN 		; see if we're at the end
+    76 00000078 7CF4                    			jl .clearTest 		; if we're not done go back
+    77                                  
+    78 0000007A BE[00000000]            		mov esi, Buff		; Go to beginning of Buff
+    79 0000007F BF[F4010000]            		mov edi, TestBuff	; Go to beginning of TestBuff
+    80                                  		.findLowercase:			; loop for finding lowercase
+    81 00000084 31C0                    			xor eax,eax				; zero out eax for good measure
+    82 00000086 8A06                    			mov al, byte [esi]		; get first char from Buff
+    83                                  
+    84 00000088 3C61                    			cmp al, 'a' 			; char >= a
+    85 0000008A 7C07                    			jl .next1 				; skip it, not lowercase
+    86 0000008C 3C7A                    			cmp al, 'z' 			; char <= z
+    87 0000008E 7F03                    			jg .next1				; skip it, not lowercase
+    88                                  
+    89 00000090 8807                    			mov byte [edi], al		; put char into test buffer   
+    90 00000092 47                      			inc edi					; increase offset for test string
+    91                                  			.next1:					; skipping logic
+    92                                  
+    93 00000093 46                      			inc esi			; move to next char in Buff
+    94 00000094 3D00000000              			cmp eax,0 		; is the char null
+    95 00000099 75E9                    		jne .findLowercase	; if not equal, there's more
+    96                                  
+    97 0000009B B804000000              		mov eax,4				; sys_write call
+    98 000000A0 BB01000000              		mov ebx,1 				; file descriptor 1, stdout
+    99 000000A5 B9[13000000]            		mov ecx,SortMsg 		; characters to write 
+   100 000000AA BA10000000              		mov edx,SortLen			; pass number of chars to write
+   101 000000AF CD80                    		int 80h 				; kernel interrupt
+   102                                  
+   103                                  Write:
+   104 000000B1 B804000000              		mov eax,4 				; sys_write call
+   105 000000B6 BB01000000              		mov ebx, 1 				; stdout
+   106 000000BB B9[F4010000]            		mov ecx,TestBuff		; buffer to write from
+   107 000000C0 BAF4010000              		mov edx,BUFFLEN 		; print only what we need
+   108 000000C5 CD80                    		int 80h 				; kernel interrupt
+   109                                  
+   110                                  		; Following code is bubble sort
+   111                                  		; [d]  [c]  [b]  [a]
+   112                                  		; [>c] [d<] [b]  [a]
+   113                                  		; [>b] [d]  [c<] [a]
+   114                                  		; [>a] [d]  [c]  [b<]
+   115                                  		; [a]  [>c] [d<] [b]
+   116                                  		; [a]  [>b] [d]  [c<]
+   117                                  		; [a]  [b]  [>c] [d<]
+   118 000000C7 6631C0                  		xor ax,ax 				; clear AX register
+   119 000000CA BE[F4010000]            		mov esi, TestBuff 		; beginning of testbuff
+   120 000000CF BF[F4010000]            		mov edi, TestBuff 		; beginning of testbuff
+   121                                  		.loop4: 				; sorting loop
+   122 000000D4 47                      			inc edi				; increase second pointer to check n and n+1
+   123 000000D5 8A06                    			mov al, byte [esi] 	; copy char 1 to al
+   124 000000D7 8A27                    			mov ah, byte [edi] 	; copy char 2 to ah
+   125                                  
+   126 000000D9 80FC00                  			cmp ah, 0			; check if ptr 2 is at the end of the string
+   127 000000DC 7412                    			je .l3next			; continue if it isn't, otherwise go to the next part
+   128                                  
+   129 000000DE 38E0                    			cmp al, ah				; check if ptr 1 comes before ptr 2
+   130 000000E0 7CF2                    			jl .loop4 				; skip the following two lines if not
+   131 000000E2 8826                    				mov byte [esi], ah		; if it doesn't, flip ptr 2 and ptr 1
+   132 000000E4 8807                    				mov byte [edi], al 		; flip the other char
+   133 000000E6 E82A000000              				call WriteTest 			; we changed, print it
+   134 000000EB E9E4FFFFFF              			jmp .loop4				; loop it back
+   135                                  
+   136                                  			.l3next:		; part 2
+   137 000000F0 46                      			inc esi			; increase n for checking
+   138 000000F1 89F7                    			mov edi, esi	; set ptr 1 to ptr 2
+   139                                  
+   140 000000F3 8A06                    			mov al, byte [esi]	; check if ptr 1 is at the end of the string
+   141 000000F5 3C00                    			cmp al, 0 			; find if we're at the end of the string
+   142 000000F7 75DB                    		jne .loop4				; if so, exit, otherwise loop
+   143                                  
+   144 000000F9 E90AFFFFFF              		jmp Read 				; go back to reading in a character
+   145                                  
+   146                                  NewLine:
+   147 000000FE B804000000              		mov eax,4				; sys_write call
+   148 00000103 BB01000000              		mov ebx,1 				; file descriptor 1, stdout
+   149 00000108 B9[23000000]            		mov ecx,NewLineMsg 		; characters to write 
+   150 0000010D BA01000000              		mov edx,NewLineLen		; pass number of chars to write
+   151 00000112 CD80                    		int 80h 				; kernel interrupt
+   152 00000114 C3                      		ret 					; return
+   153                                  
+   154                                  WriteTest:
+   155 00000115 E8E4FFFFFF              		call NewLine 			; print new line
+   156                                  
+   157 0000011A B804000000              		mov eax,4				; sys_write call
+   158 0000011F BB01000000              		mov ebx,1 				; file descriptor 1, stdout
+   159 00000124 B9[F4010000]            		mov ecx,TestBuff 		; characters to write 
+   160 00000129 BAF4010000              		mov edx,BUFFLEN			; pass number of chars to write
+   161 0000012E CD80                    		int 80h 				; kernel interrupt
+   162 00000130 C3                      		ret 					; return
+   163                                  Exit:
+   164 00000131 E8C8FFFFFF              		call NewLine 			; print new line
+   165 00000136 B801000000              		mov eax, 1              ; sys_exit syscall
+   166 0000013B BB00000000                      mov ebx, 0              ; no error
+   167 00000140 CD80                            int 80H                 ; kernel interrupt
